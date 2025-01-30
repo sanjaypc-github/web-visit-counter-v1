@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/web-visit-counter-v1/static/css/main.7e24120a.css",
+    "main.js": "/web-visit-counter-v1/static/js/main.0baac714.js",
+    "index.html": "/web-visit-counter-v1/index.html",
+    "main.7e24120a.css.map": "/web-visit-counter-v1/static/css/main.7e24120a.css.map",
+    "main.0baac714.js.map": "/web-visit-counter-v1/static/js/main.0baac714.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7e24120a.css",
+    "static/js/main.0baac714.js"
+  ]
+}
