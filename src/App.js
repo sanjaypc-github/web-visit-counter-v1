@@ -105,8 +105,10 @@ function App() {
   };
 
   const updateStats = (data) => {
+    const total_visit = data.today.totalVisits-1;
+    
     setVisitorStats({
-      totalVisits: data.today.totalVisits,
+      totalVisits: total_visit,
       uniqueVisitors: data.today.uniqueVisitors.length,
       avgViewDuration: Math.round(data.today.avgViewDuration) || 0,
       newVisitors: data.today.newVisitors

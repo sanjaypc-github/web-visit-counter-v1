@@ -72,7 +72,7 @@ function InsightsPage() {
                     month: 'long',
                     day: 'numeric'
                   })}</td>
-                  <td>{day.totalVisits}</td>
+                  <td>{day.totalVisits-1}</td>
                   <td>{day.uniqueVisitors}</td>
                   <td>{Math.round(day.avgViewDuration)}</td>
                   <td>{Math.round(day.bounceRate)}%</td>

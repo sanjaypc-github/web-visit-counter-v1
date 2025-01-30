@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const morgan = require('morgan');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -11,15 +11,35 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// MongoDB Connection with more detailed logging
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/traffic-counter', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => {
+  console.log('Successfully connected to MongoDB.');
+  console.log('Database:', mongoose.connection.name);
+  console.log('Host:', mongoose.connection.host);
+  console.log('Port:', mongoose.connection.port);
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+
+// Add connection error handling
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
 
 // Traffic Schema
 const trafficSchema = new mongoose.Schema({
-  visitorId: String,
-  sessionId: String,
+  visitorId: { type: String, required: true },
+  sessionId: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
   pageUrl: String,
   referrer: String,
@@ -29,11 +49,12 @@ const trafficSchema = new mongoose.Schema({
 
 const Traffic = mongoose.model('Traffic', trafficSchema);
 
-// Routes
+// Add logging to track data operations
 app.post('/api/traffic/record-visit', async (req, res) => {
   try {
     const { visitorId, sessionId, pageUrl, referrer, isNewVisitor } = req.body;
-
+    console.log('Recording new visit:', { visitorId, sessionId, pageUrl });
+    
     const traffic = new Traffic({
       visitorId,
       sessionId,
@@ -43,6 +64,7 @@ app.post('/api/traffic/record-visit', async (req, res) => {
     });
 
     await traffic.save();
+    console.log('Visit recorded successfully:', traffic._id);
 
     // Get today's stats
     const today = new Date();
@@ -59,17 +81,17 @@ app.post('/api/traffic/record-visit', async (req, res) => {
           _id: null,
           totalVisits: { $sum: 1 },
           uniqueVisitors: { $addToSet: '$visitorId' },
-          totalViewDuration: { $sum: '$viewDuration' },
+          totalDuration: { $sum: '$viewDuration' },
           newVisitors: { $sum: { $cond: ['$isNewVisitor', 1, 0] } }
         }
       }
     ]);
 
-    // Get last 7 days stats
-    const sevenDaysAgo = new Date(today);
+    const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const historicalStats = await Traffic.aggregate([
+    const historical = await Traffic.aggregate([
       {
         $match: {
           timestamp: { $gte: sevenDaysAgo }
@@ -82,7 +104,7 @@ app.post('/api/traffic/record-visit', async (req, res) => {
           },
           visits: { $sum: 1 },
           uniqueVisitors: { $addToSet: '$visitorId' },
-          totalViewDuration: { $sum: '$viewDuration' }
+          totalDuration: { $sum: '$viewDuration' }
         }
       },
       {
@@ -90,20 +112,20 @@ app.post('/api/traffic/record-visit', async (req, res) => {
           _id: 1,
           visits: 1,
           uniqueVisitors: 1,
-          avgViewDuration: { $divide: ['$totalViewDuration', '$visits'] }
+          avgViewDuration: { $divide: ['$totalDuration', '$visits'] }
         }
       },
       { $sort: { _id: -1 } }
     ]);
 
     const stats = {
-      today: todayStats[0] || {
-        totalVisits: 0,
-        uniqueVisitors: [],
-        totalViewDuration: 0,
-        newVisitors: 0
+      today: {
+        totalVisits: todayStats[0]?.totalVisits || 0,
+        uniqueVisitors: todayStats[0]?.uniqueVisitors || [],
+        avgViewDuration: todayStats[0]?.totalDuration / todayStats[0]?.totalVisits || 0,
+        newVisitors: todayStats[0]?.newVisitors || 0
       },
-      historical: historicalStats
+      historical
     };
 
     res.json(stats);
@@ -116,10 +138,12 @@ app.post('/api/traffic/record-visit', async (req, res) => {
 app.post('/api/traffic/update-duration', async (req, res) => {
   try {
     const { sessionId, duration } = req.body;
+    console.log('Updating duration for session:', sessionId);
     await Traffic.findOneAndUpdate(
       { sessionId },
       { viewDuration: duration }
     );
+    console.log('Duration updated successfully for session:', sessionId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating duration:', error);
@@ -143,16 +167,17 @@ app.get('/api/traffic/stats', async (req, res) => {
           _id: null,
           totalVisits: { $sum: 1 },
           uniqueVisitors: { $addToSet: '$visitorId' },
-          totalViewDuration: { $sum: '$viewDuration' },
+          totalDuration: { $sum: '$viewDuration' },
           newVisitors: { $sum: { $cond: ['$isNewVisitor', 1, 0] } }
         }
       }
     ]);
 
-    const sevenDaysAgo = new Date(today);
+    const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const historicalStats = await Traffic.aggregate([
+    const historical = await Traffic.aggregate([
       {
         $match: {
           timestamp: { $gte: sevenDaysAgo }
@@ -165,7 +190,7 @@ app.get('/api/traffic/stats', async (req, res) => {
           },
           visits: { $sum: 1 },
           uniqueVisitors: { $addToSet: '$visitorId' },
-          totalViewDuration: { $sum: '$viewDuration' }
+          totalDuration: { $sum: '$viewDuration' }
         }
       },
       {
@@ -173,20 +198,20 @@ app.get('/api/traffic/stats', async (req, res) => {
           _id: 1,
           visits: 1,
           uniqueVisitors: 1,
-          avgViewDuration: { $divide: ['$totalViewDuration', '$visits'] }
+          avgViewDuration: { $divide: ['$totalDuration', '$visits'] }
         }
       },
       { $sort: { _id: -1 } }
     ]);
 
     const stats = {
-      today: todayStats[0] || {
-        totalVisits: 0,
-        uniqueVisitors: [],
-        totalViewDuration: 0,
-        newVisitors: 0
+      today: {
+        totalVisits: todayStats[0]?.totalVisits || 0,
+        uniqueVisitors: todayStats[0]?.uniqueVisitors || [],
+        avgViewDuration: todayStats[0]?.totalDuration / todayStats[0]?.totalVisits || 0,
+        newVisitors: todayStats[0]?.newVisitors || 0
       },
-      historical: historicalStats
+      historical
     };
 
     res.json(stats);
@@ -219,7 +244,7 @@ app.get('/api/traffic/insights', async (req, res) => {
           shortVisits: { 
             $sum: { 
               $cond: [
-                { $lt: ['$viewDuration', 30] }, // Less than 30 seconds
+                { $lt: ['$viewDuration', 30] },
                 1,
                 0
               ]
