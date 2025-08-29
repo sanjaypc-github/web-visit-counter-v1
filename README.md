@@ -76,3 +76,31 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Deploy backend to Render
+
+This repo includes a Render Blueprint (`render.yaml`) to deploy the backend.
+
+Steps:
+
+1. Create a MongoDB database (e.g., MongoDB Atlas) and copy its connection string.
+2. Push your latest changes to GitHub.
+3. In Render, create a new Blueprint and select this repository. Render will detect `render.yaml`.
+4. Set environment variables for the service:
+   - `MONGODB_URI`: your MongoDB connection string
+   - `NODE_ENV`: `production`
+5. Render will build (`npm install`) and start (`node server.js`) the backend under `backend/`.
+6. After it’s live, note the service URL (e.g., `https://<service>.onrender.com`).
+
+Frontend configuration:
+
+1. In the project root, create a `.env` file with:
+```
+REACT_APP_API_URL=https://<service>.onrender.com
+```
+2. Rebuild and deploy the frontend:
+```
+npm run build
+npm run deploy
+```
+Your GitHub Pages site will now call the deployed backend.

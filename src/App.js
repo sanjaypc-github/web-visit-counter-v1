@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import InsightsPage from './components/InsightsPage';
 import './App.css';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function App() {
   const [visitorStats, setVisitorStats] = useState({
@@ -31,7 +33,7 @@ function App() {
       const sessionId = Math.random().toString(36).substr(2, 9) + Date.now();
       
       if (!sessionStorage.getItem('currentSession')) {
-        const response = await fetch('http://localhost:5000/api/traffic/record-visit', {
+        const response = await fetch(`${API_URL}/api/traffic/record-visit`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -55,7 +57,7 @@ function App() {
       const updateDuration = async () => {
         const duration = Math.floor((Date.now() - startTime) / 1000);
         try {
-          await fetch('http://localhost:5000/api/traffic/update-duration', {
+          await fetch(`${API_URL}/api/traffic/update-duration`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -95,7 +97,7 @@ function App() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/traffic/stats');
+      const response = await fetch(`${API_URL}/api/traffic/stats`);
       const data = await response.json();
       updateStats(data);
     } catch (error) {

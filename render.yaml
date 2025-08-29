@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: traffic-counter-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/traffic/stats
+
