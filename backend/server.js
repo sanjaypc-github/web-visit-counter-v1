@@ -11,8 +11,17 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// MongoDB Connection with environment-aware URI
+const isProduction = process.env.NODE_ENV === 'production';
+const mongoUri = process.env.MONGODB_URI || (!isProduction ? 'mongodb://localhost:27017/traffic-counter' : '');
+
+if (!mongoUri) {
+  console.error('Missing MONGODB_URI. Set it in your hosting environment for production.');
+  process.exit(1);
+}
+
 // MongoDB Connection with more detailed logging
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/traffic-counter', {
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
