@@ -62,7 +62,7 @@ function InsightsPage() {
     const labels = byDateAsc.map(d => new Date(d._id).toLocaleDateString());
     return {
       labels,
-      visitsSeries: byDateAsc.map(d => Math.max(0, (d.totalVisits || 0) - 1)),
+      visitsSeries: byDateAsc.map(d => d.totalVisits || 0),
       uniquesSeries: byDateAsc.map(d => d.uniqueVisitors || 0),
       avgTimeSeries: byDateAsc.map(d => Math.round(d.avgViewDuration || 0)),
       bounceRateSeries: byDateAsc.map(d => Math.round(d.bounceRate || 0)),
@@ -231,7 +231,7 @@ function InsightsPage() {
                     month: 'long',
                     day: 'numeric'
                   })}</td>
-                  <td>{day.totalVisits-1}</td>
+                  <td>{day.totalVisits}</td>
                   <td>{day.uniqueVisitors}</td>
                   <td>{Math.round(day.avgViewDuration)}</td>
                   <td>{Math.round(day.bounceRate)}%</td>
